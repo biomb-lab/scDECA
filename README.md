@@ -21,9 +21,14 @@ scDECA yields **biologically coherent**, **dropout-robust**, and **relation-awar
 
 # 📦 1. **Environment Setup**
 ### **environment.yml**
-conda env create -f environment.yml
-conda acitvate scDECA
-
+To set up the scDECA environment using Conda:
+'''
+bash conda env create -f environment.yml
+'''
+Activate the newly created environment:
+'''
+bash conda activate scDECA
+'''
 # 🧬 2. Single-cell Foundation Models Gene Token Embedding Extraction (scGPT)
 
 scDECA requires pretrained gene embeddings, stored in adata.varm.
