@@ -1,0 +1,129 @@
+
+# **scDECA: Intergrating Gene-Cell interactions with Global Priors and Local Structures in Single-Cell Transcriptomics**
+
+## **Overview**
+
+ingle-cell RNA sequencing enables high-resolution profiling of cellular transcriptomes but remains challenging due to **high dimensionality**, **sparsity**, and **dropout noise**.  
+Single-cell foundation models capture **global gene-level semantics**, but often miss **condition-specific variation**.  
+Conversely, graph-based GNN approaches recover **local relational structure** without leveraging broader biological context.
+
+To address these limitations, we introduce **scDECA**, a **Dual-Encoder Cross-Attention** framework that integrates:
+
+- **Gene Encoder** — FM-based gene embeddings + PPI graph  
+- **Cell Encoder** — KNN similarity graph + contextual attention  
+- **Cross-Attention Alignment** — aligns molecular and cellular representations  
+- **Unified Gene–Cell Embeddings** — capture global semantics + local heterogeneity  
+
+scDECA yields **biologically coherent**, **dropout-robust**, and **relation-aware** embeddings that significantly improve reconstruction, co-expression recovery, and pathway detection 
+
+
+<!-- ![Overview of the scNET Method](https://raw.githubusercontent.com/madilabcode/scNET/bb9385a9945e34e1e2500c8173baf5c8ece91f79/images/scNET.jpg) -->
+
+# 📦 1. **Environment Setup**
+### **environment.yml**
+conda env create -f environment.yml
+conda acitvate scDECA
+
+# 🧬 2. Single-cell Foundation Models Gene Token Embedding Extraction (scGPT)
+
+scDECA requires pretrained gene embeddings, stored in adata.varm.
+We provide a complete extraction pipeline using scGPT in:
+
+Embedding_Extractor_scGPT.ipynb
+
+# 🚀 3. Running scDECA
+## API
+Train scDECA using your AnnData object with gene embeddings:
+
+`scDECA.run_scDECA(obj, model_type="scgpt", embedding_key=None, pre_processing_flag=True, 
+                  biogrid_flag=False, human_flag=False, number_of_batches=5, split_cells=False, 
+                  n_neighbors=25, max_epoch=150, model_name=project_name, save_model_flag=False, 
+                  bbknn_flag=False, device_str="cuda:0", num_heads=8, projection_dim=None)`
+
+with the following args:
+
+* **obj (AnnData, required)**:  
+  AnnData object containing gene expression matrix (`.X`) and FM gene embeddings stored in `.varm`.
+
+* **model_type (str, optional)**:  
+  Type of foundation model embeddings.  
+  Options: `"scgpt"`, `"cellfm"`, `"custom"`.
+
+* **embedding_key (str, optional)**:  
+  Key in `adata.varm` containing gene embeddings.  
+  Automatically selected when `None`.
+
+* **pre_processing_flag (bool, optional)**:  
+  If `True`, apply Scanpy preprocessing (`log1p`, neighbors).  
+  If `False`, use existing `adata.raw`.
+
+* **biogrid_flag (bool, optional)**:  
+  If `True`, use BioGRID as the PPI network instead of the default STRING-like network.
+
+* **human_flag (bool, optional)**:  
+  Controls gene symbol casing for PPI matching (use for human datasets).
+
+* **number_of_batches (int, optional)**:  
+  Number of cell mini-batches for memory-efficient training.  
+  Automatically adjusted for large datasets.
+
+* **split_cells (bool, optional)**:  
+  If `True`, training is performed in *cell-batching* mode instead of full KNN-edge mode.
+
+* **n_neighbors (int, optional)**:  
+  Number of neighbors used to construct the cell KNN graph.
+
+* **max_epoch (int, optional)**:  
+  Maximum number of epochs for model training.
+
+* **model_name (str, optional)**:  
+  Name of the folder for saving model outputs under `scDECA/Models/<model_name>`.
+
+* **save_model_flag (bool, optional)**:  
+  If `True`, save the final PyTorch model (`model.pt`).
+
+* **bbknn_flag (bool, optional)**:  
+  If `True`, use BBKNN for batch-corrected neighbor graph construction.
+
+* **device_str (str, optional)**:  
+  Device string such as `"cuda:0"` or `"cpu"`.
+
+* **num_heads (int, optional)**:  
+  Number of cross-attention heads used in gene–cell alignment.
+
+* **projection_dim (int, optional)**:  
+  Projection dimension for fusing FM embeddings with raw expression features.
+
+
+### Loading Model-Derived Embeddings and Outputs
+
+`gene_embedding, cell_embedding, node_features, reconstructed_feature, normalized_feature = scDECA.load_embeddings(model_name)`
+
+* **gene_embedding (np.ndarray)**:  
+  Latent gene representations learned by scDECA’s gene encoder and cross-attention module.  
+  These embeddings integrate FM-based global semantics with PPI-guided relational structure.
+
+* **cell_embedding (np.ndarray)**:  
+  Cell-level embeddings capturing context-dependent similarity patterns refined through the cell encoder.
+
+* **node_features (np.ndarray or pd.DataFrame)**:  
+  Z-score normalized gene expression matrix used as the model’s primary input.  
+  This reflects the expression landscape after preprocessing but before reconstruction.
+
+* **reconstructed_feature (np.ndarray)**:  
+  Denoised and structure-aware expression matrix generated by scDECA.  
+  Useful for downstream DEG analysis, pathway enrichment, and co-expression recovery.
+
+* **normalized_feature (np.ndarray)**:  
+  Normalized expression values actually fed into each training iteration  
+  (per-batch or per-cell normalization depending on training mode).
+  
+## Tutorials
+
+To get started with scDECA, you can explore the introductory walkthrough below:  
+**[scDECA Basic Example](https://github.com/biomb-lab/scDECA/scDECA_basic.ipynb)**  
+This tutorial covers data loading, integration of foundation model embeddings, and running a full scDECA training pipeline.
+
+If you are interested in generating FM-based gene embeddings, the following notebook guides you through extracting scGPT gene tokens:  
+**[scGPT Gene Embedding Extraction](https://github.com/biomb-lab/scDECA/scDECA_scGPT_embedding.ipynb)**  
+It demonstrates how to produce and store `adata.varm["scGPT_gene_token"]` for downstream use in scDECA.

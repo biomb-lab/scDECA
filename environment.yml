@@ -1,0 +1,25 @@
+name: scDECA
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pytorch=2.2.0
+  - pytorch-cuda=12.1
+  - numpy=1.26.4
+  - pandas=2.2.3
+  - scipy=1.13.1
+  - scikit-learn=1.6.1
+  - matplotlib=3.9.4
+  - seaborn=0.13.2
+  - networkx=3.2.1
+  - anndata=0.10.7
+  - scanpy=1.10.3
+  - pip
+
+  - pip:
+      - torch-geometric==2.6.1
+      - scgpt==0.2.4
