@@ -120,13 +120,13 @@ with the following args:
   
 ## Tutorials
 Before running scDECA, you must first generate and attach foundation-model (FM) gene embeddings to your AnnData object.
-Start with the following notebook: **[FMs Gene Embedding Extraction](https://github.com/biomb-lab/embedding_extract.ipynb)**  
+Start with the following notebook: **[FMs Gene Embedding Extraction](https://github.com/biomb-lab/scDECA/edit/main/embedding_extract.ipynb)**  
 This notebook walks through extracting scGPT-based gene token embeddings and saving them into
 adata.varm["scGPT_gene_token"].
 This embedding step must be completed first, as scDECA depends on these FM representations.
 
 Once FM embeddings are added to your AnnData, you can proceed with the main model:
-**[scDECA Basic Example](https://github.com/biomb-lab/scDECA.ipynb)**  
+**[scDECA Basic Example](https://github.com/biomb-lab/scDECA/edit/main/scDECA.ipynb)**  
 This introductory tutorial demonstrates how to:
 * Load scRNA-seq data
 * Integrate FM-based gene embeddings
