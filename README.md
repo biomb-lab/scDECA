@@ -17,7 +17,7 @@ To address these limitations, we introduce **scDECA**, a **Dual-Encoder Cross-At
 scDECA yields **biologically coherent**, **dropout-robust**, and **relation-aware** embeddings that significantly improve reconstruction, co-expression recovery, and pathway detection 
 
 
-![Overview of the scDEACA](https://github.com/biomb-lab/scDECA/edit/main/images/overview.pdf)
+![Overview of the scDEACA](https://github.com/user-attachments/assets/2f1b1f5a-6c74-43c5-b07a-c6ce9b2d03b5)
 
 # 📦 1. **Environment Setup**
 ### **environment.yml**
