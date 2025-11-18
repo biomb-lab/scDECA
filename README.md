@@ -17,7 +17,7 @@ To address these limitations, we introduce **scDECA**, a **Dual-Encoder Cross-At
 scDECA yields **biologically coherent**, **dropout-robust**, and **relation-aware** embeddings that significantly improve reconstruction, co-expression recovery, and pathway detection 
 
 
-<!-- ![Overview of the scNET Method](https://raw.githubusercontent.com/madilabcode/scNET/bb9385a9945e34e1e2500c8173baf5c8ece91f79/images/scNET.jpg) -->
+![Overview of the scDEACA](https://github.com/biomb-lab/scDECA/edit/main/images/overview.pdf)
 
 # 📦 1. **Environment Setup**
 ### **environment.yml**
@@ -140,3 +140,9 @@ This introductory tutorial demonstrates how to:
 * Train scDECA end-to-end
 
 
+## Acknowledgements
+
+Parts of this repository were inspired by the design and implementation of the
+[scNET](https://github.com/madilabcode/scNET) framework.  
+We thank the scNET authors for sharing their codebase, which helped guide aspects of the
+software structure and implementation of scDECA.
