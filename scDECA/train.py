@@ -24,41 +24,23 @@ def evaluate_reconstruction(model, x_foundation, x_raw, data, knn_edge_index):
         ap: Average precision score
     """
     model.eval()
+    device = next(model.parameters()).device
+
+    x_foundation = x_foundation.to(device)
+    x_raw = x_raw.to(device)
+    knn_edge_index = knn_edge_index.to(device)
+    train_pos_edge_index = data.train_pos_edge_index.to(device)
+    test_pos_edge_index = data.test_pos_edge_index.to(device)
+    test_neg_edge_index = data.test_neg_edge_index.to(device)
+
     with torch.no_grad():
-        embbed_rows, _, _ = model(x_foundation, x_raw, knn_edge_index, data.train_pos_edge_index)
-    return model.test(embbed_rows, data.test_pos_edge_index, data.test_neg_edge_index)
-
-
-
-import torch
-import torch.nn as nn
-from tqdm import tqdm
-import gc
-import pkg_resources
-from . import utils as ut
-from .attention import analyze_cross_attention_complete
-import os
-
-
-def evaluate_reconstruction(model, x_foundation, x_raw, data, knn_edge_index):
-    """
-    Evaluate model reconstruction performance on test edges.
-    
-    Args:
-        model: scDECA model
-        x_foundation: Foundation model embeddings (num_genes, foundation_embed_dim)
-        x_raw: Raw gene expression (num_genes, num_cells)
-        data: PyG Data object with test edges
-        knn_edge_index: KNN edges for cells
-    
-    Returns:
-        auc: Area under ROC curve
-        ap: Average precision score
-    """
-    model.eval()
-    with torch.no_grad():
-        embbed_rows, _, _ = model(x_foundation, x_raw, knn_edge_index, data.train_pos_edge_index)
-    return model.test(embbed_rows, data.test_pos_edge_index, data.test_neg_edge_index)
+        embbed_rows, _, _ = model(
+            x_foundation,
+            x_raw,
+            knn_edge_index,
+            train_pos_edge_index,
+        )
+    return model.test(embbed_rows, test_pos_edge_index, test_neg_edge_index)
 
 
 def train(data, loader, highly_variable_index, x_raw, device, model_name, 
@@ -97,23 +79,28 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
     """
     from .scDECA import scDECA
     
-    x_foundation = data.x.clone()
-    x_raw = x_raw.clone()
-    
+    x_foundation = data.x.clone().to(device)
+    x_raw = x_raw.clone().to(device)
+    data.train_pos_edge_index = data.train_pos_edge_index.to(device)
+
     if cell_batching_flag:
         cells_per_batch = x_raw.shape[1] // number_of_batches
         
-        model = scDECA(cells_per_batch, x_raw.shape[0], x_foundation.shape[1],
-                     inter_dim, embedding_dim, inter_dim, embedding_dim, 
-                     lambda_genes=1, lambda_cells=1, num_layers=num_layers, 
-                     num_heads=num_heads,
-                     projection_dim=projection_dim).to(device)
+        model = scDECA(
+            cells_per_batch, x_raw.shape[0], x_foundation.shape[1],
+            inter_dim, embedding_dim, inter_dim, embedding_dim, 
+            lambda_genes=1, lambda_cells=1, num_layers=num_layers, 
+            num_heads=num_heads,
+            projection_dim=projection_dim
+        ).to(device)
     else:
-        model = scDECA(x_raw.shape[1], x_raw.shape[0], x_foundation.shape[1],
-                     inter_dim, embedding_dim, inter_dim, embedding_dim, 
-                     lambda_genes=1, lambda_cells=1, num_layers=num_layers,
-                     num_heads=num_heads,
-                     projection_dim=projection_dim).to(device)
+        model = scDECA(
+            x_raw.shape[1], x_raw.shape[0], x_foundation.shape[1],
+            inter_dim, embedding_dim, inter_dim, embedding_dim, 
+            lambda_genes=1, lambda_cells=1, num_layers=num_layers,
+            num_heads=num_heads,
+            projection_dim=projection_dim
+        ).to(device)
         
         x_raw_norm = ((x_raw.T - (x_raw.mean(axis=1))) / (x_raw.std(axis=1) + 0.00001)).T
 
@@ -121,8 +108,6 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=20)
 
     concat_flag = False
-    
-    # Create progress bar with postfix for metrics
     pbar = tqdm(range(max_epoch), desc="Training")
 
     for epoch in pbar:
@@ -145,17 +130,16 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
                 x_raw_batch = x_raw[:, batch_indices]
                 x_raw_batch = ((x_raw_batch.T - (x_raw_batch.mean(axis=1))) / (x_raw_batch.std(axis=1) + 0.00001)).T
                 from .data_loader import generate_knn_batch
-                knn_edge_index = generate_knn_batch(loader.dataset.knn, batch_indices)
+                knn_edge_index = generate_knn_batch(loader.dataset.knn, batch_indices).to(device)
             else:
                 x_raw_batch = x_raw_norm
                 knn_edge_index = batch.T.to(device)
 
             if cell_batching_flag or knn_edge_index.shape[1] == loader.dataset.edge_index.shape[0] // number_of_batches:
-                
                 loss, row_loss, col_loss = model.calculate_loss(
-                    x_foundation.to(device),
-                    x_raw_batch.to(device),
-                    knn_edge_index.to(device),
+                    x_foundation,
+                    x_raw_batch,
+                    knn_edge_index,
                     data.train_pos_edge_index, 
                     highly_variable_index
                 )
@@ -172,12 +156,12 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
                 with torch.no_grad():
                     if cell_batching_flag:
                         row_embed, col_embed, out_features = model(
-                            x_foundation.to(device),
-                            x_raw_batch.to(device),
-                            knn_edge_index, 
+                            x_foundation,
+                            x_raw_batch,
+                            knn_edge_index,
                             data.train_pos_edge_index
                         )
-                        cell_input_emb = model.cell_encoder(x_raw_batch.to(device), knn_edge_index)
+                        cell_input_emb = model.cell_encoder(x_raw_batch, knn_edge_index)
                         col_emb_lst.append(col_embed.cpu())
                         row_emb_lst.append(row_embed.cpu())
                         imput_lst.append(cell_input_emb.T.cpu())
@@ -185,9 +169,9 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
                         normalized_x_lst.append(x_raw_batch.cpu())
                     else:
                         row_embed, col_embed, out_features = model(
-                            x_foundation.to(device),
-                            x_raw_batch.to(device),
-                            knn_edge_index.to(device), 
+                            x_foundation,
+                            x_raw_batch,
+                            knn_edge_index,
                             data.train_pos_edge_index
                         )
             else:
@@ -218,11 +202,16 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
             if not cell_batching_flag:
                 knn_edge_index = list(loader)[0].T.to(device)
 
-            auc, ap = evaluate_reconstruction(model, x_foundation.to(device), x_raw_batch.to(device), data, knn_edge_index)
+            auc, ap = evaluate_reconstruction(
+                model,
+                x_foundation,
+                x_raw_batch,
+                data,
+                knn_edge_index
+            )
             
             scheduler.step(auc)
 
-            # Update progress bar with metrics
             pbar.set_postfix({
                 'Loss': f'{avg_total_loss:.4f}',
                 'Row': f'{avg_row_loss:.4f}',
@@ -249,38 +238,55 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
                     averaged_row_embed = stacked_row_embed.mean(dim=0)
                     concatenated_col_embed = torch.cat(col_emb_lst, dim=0)
                     
-                    ut.save_obj(concatenated_col_embed.cpu().detach().numpy(), 
-                            os.path.join(embedding_dir, "cell_embedding"))
-                    ut.save_obj(averaged_row_embed.cpu().detach().numpy(), 
-                            os.path.join(embedding_dir, "gene_embedding"))
+                    ut.save_obj(
+                        concatenated_col_embed.cpu().detach().numpy(), 
+                        os.path.join(embedding_dir, "cell_embedding")
+                    )
+                    ut.save_obj(
+                        averaged_row_embed.cpu().detach().numpy(), 
+                        os.path.join(embedding_dir, "gene_embedding")
+                    )
                 
                 if batch_out_features:
                     concatenated_out_features = torch.cat(batch_out_features, dim=0)
-                    ut.save_obj(concatenated_out_features.cpu().detach().numpy(),  
-                            os.path.join(embedding_dir, "reconstructed_feature"))
+                    ut.save_obj(
+                        concatenated_out_features.cpu().detach().numpy(),  
+                        os.path.join(embedding_dir, "reconstructed_feature")
+                    )
                 
                 if normalized_x_lst:
                     concatenated_normalized_x = torch.cat(normalized_x_lst, dim=1)
-                    ut.save_obj(concatenated_normalized_x.cpu().detach().numpy(),
-                            os.path.join(embedding_dir, "normalized_feature"))
+                    ut.save_obj(
+                        concatenated_normalized_x.cpu().detach().numpy(),
+                        os.path.join(embedding_dir, "normalized_feature")
+                    )
             else:
-                ut.save_obj(new_knn_edge_index.cpu(), 
-                        os.path.join(knn_dir, "knn_graph"))
-                ut.save_obj(col_embed.cpu().detach().numpy(), 
-                        os.path.join(embedding_dir, "cell_embedding"))
-                ut.save_obj(row_embed.cpu().detach().numpy(), 
-                        os.path.join(embedding_dir, "gene_embedding"))
-                ut.save_obj(out_features.cpu().detach().numpy(),  
-                        os.path.join(embedding_dir, "reconstructed_feature"))
-                ut.save_obj(x_raw_batch.cpu().detach().numpy(),
-                        os.path.join(embedding_dir, "normalized_feature"))
+                ut.save_obj(
+                    new_knn_edge_index.cpu(), 
+                    os.path.join(knn_dir, "knn_graph")
+                )
+                ut.save_obj(
+                    col_embed.cpu().detach().numpy(), 
+                    os.path.join(embedding_dir, "cell_embedding")
+                )
+                ut.save_obj(
+                    row_embed.cpu().detach().numpy(), 
+                    os.path.join(embedding_dir, "gene_embedding")
+                )
+                ut.save_obj(
+                    out_features.cpu().detach().numpy(),  
+                    os.path.join(embedding_dir, "reconstructed_feature")
+                )
+                ut.save_obj(
+                    x_raw_batch.cpu().detach().numpy(),
+                    os.path.join(embedding_dir, "normalized_feature")
+                )
     
     if enable_attention_analysis and cell_names is not None and gene_names is not None:
         print("\n" + "="*60)
         print("PERFORMING FINAL ATTENTION ANALYSIS")
         print("="*60)
         
-        # Use new organized structure
         package_dir = os.path.dirname(__file__)
         final_attention_dir = os.path.join(
             package_dir, "Models", model_name, "Attention", "final_analysis"
@@ -309,11 +315,11 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
             print(f"   - Cells: {len(actual_cell_names) if actual_cell_names else 'None'}")
             print(f"   - x_raw shape: {actual_x_raw.shape}")
             
-            final_analyzer = analyze_cross_attention_complete(
+            analyze_cross_attention_complete(
                 model=model,
                 x_foundation=x_foundation.to(device),
                 x_raw=actual_x_raw.to(device),
-                knn_edge_index=actual_knn_edge_index,
+                knn_edge_index=actual_knn_edge_index.to(device),
                 ppi_edge_index=data.train_pos_edge_index,
                 cell_names=actual_cell_names,
                 gene_names=gene_names,
@@ -327,7 +333,6 @@ def train(data, loader, highly_variable_index, x_raw, device, model_name,
             import traceback
             traceback.print_exc()
     
-    # Save final model
     model_dir = os.path.join("Models", model_name)
     os.makedirs(model_dir, exist_ok=True)  
 

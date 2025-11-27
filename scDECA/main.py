@@ -25,6 +25,10 @@ DE_GENES_NUM = 3000
 NUM_LAYERS = 3
 NUM_HEADS = 4
 
+NETWORK_CUTOFF = 0.5  # Minimum edge weight for PPI network
+EXPRESSION_CUTOFF = 0.0  # Minimum expression threshold
+
+
 warnings.filterwarnings('ignore')
 
 
@@ -150,9 +154,9 @@ def run_scDECA(obj, model_type='scgpt', embedding_key=None, pre_processing_flag=
 
     if not biogrid_flag:
         print("Loading PPI network...")
-        net = pd.read_csv(pkg_resources.resource_filename(__name__, r"Data/format_h_sapiens.csv"))[["g1_symbol", "g2_symbol", "conn"]].drop_duplicates()
+        net = pd.read_csv(pkg_resources.resource_filename(__name__, r"Data/ppi_network.csv"))[["g1_symbol", "g2_symbol", "conn"]].drop_duplicates()
         net, ppi, node_feature_fm, node_feature_raw = construct_network(
-            obj, net, model_type, adata=obj, embedding_key=embedding_key, human_flag=human_flag
+            obj, net, model_type, adata=obj, embedding_key=embedding_key, human_flag=human_flag,  expression_cutoff=NETWORK_CUTOFF, network_cutoff=NETWORK_CUTOFF
         )
         print(f"Network built with {model_type.upper()} embeddings from AnnData:")
         print(f"   - FM embeddings: {node_feature_fm.shape}")
@@ -161,7 +165,7 @@ def run_scDECA(obj, model_type='scgpt', embedding_key=None, pre_processing_flag=
         print("Loading BioGRID network...")
         net = pd.read_table(pkg_resources.resource_filename(__name__, r"Data/BIOGRID.tab.txt"))[["OFFICIAL_SYMBOL_A", "OFFICIAL_SYMBOL_B"]].drop_duplicates()
         net, ppi, node_feature_fm, node_feature_raw = construct_network(
-            obj, net, model_type, adata=obj, embedding_key=embedding_key, biogrid_flag=biogrid_flag, human_flag=human_flag
+            obj, net, model_type, adata=obj, embedding_key=embedding_key, biogrid_flag=biogrid_flag, human_flag=human_flag,  expression_cutoff=NETWORK_CUTOFF, network_cutoff=NETWORK_CUTOFF
         )
         print(f"Network built with {model_type.upper()} embeddings from AnnData:")
         print(f"   - FM embeddings: {node_feature_fm.shape}")

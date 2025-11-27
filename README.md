@@ -19,18 +19,37 @@ scDECA yields **biologically coherent**, **dropout-robust**, and **relation-awar
 
 ## 📦 **1. Environment Setup**
 
-### **environment.yml**
-To set up the scDECA environment using Conda:
+### **Create and activate a clean Python environment**
 ```bash
-conda env create -f environment.yml
-```
-
-Activate the newly created environment:
-```bash
+conda create -n scDECA python=3.10 -y
 conda activate scDECA
 ```
+### **Install the remaining Python dependencies**
+```bash
+pip install -r requirements.txt
+```
 
-## 🧬 **2. Single-cell Foundation Models Gene Token Embedding Extraction**
+## 🔧 **2. Download Pretrained Models**
+
+### **scGPT Pretrained Models**
+Before extracting gene embeddings, you need to download the pretrained scGPT models:
+
+
+Download the desired model from the [scGPT Model Zoo](https://github.com/bowang-lab/scGPT/tree/main):
+   - Visit the Pretrained scGPT Model Zoo section
+   - Choose the appropriate model for your analysis
+   - Download and place it in `scDECA/pretrained/`
+
+For example, to use the whole-human model:
+```bash
+# Download the model file to scDECA/pretrained/
+cd scDECA/pretrained
+# Follow the download instructions from the scGPT repository
+```
+
+**Note**: Make sure the model file is properly placed in `scDECA/pretrained/` before proceeding to gene embedding extraction.
+
+## 🧬 **3. Single-cell Foundation Models Gene Token Embedding Extraction**
 
 scDECA requires pretrained gene embeddings stored in `adata.varm`. We provide a complete extraction pipeline using scGPT.
 
@@ -38,7 +57,7 @@ scDECA requires pretrained gene embeddings stored in `adata.varm`. We provide a 
 
 See: **[FMs Gene Embedding Extraction.ipynb](https://github.com/biomb-lab/scDECA/blob/main/embedding_extract.ipynb)**
 
-## 🚀 **3. Running scDECA**
+## 🚀 **4. Running scDECA**
 
 ### **API Usage**
 
@@ -156,7 +175,7 @@ Learn the fundamentals:
 - Configuring model parameters
 - Training scDECA end-to-end
 - Extracting and visualizing learned representations
-
+<!-- 
 ### **Step 3: Advanced Applications**
 **[Advanced Analysis Tutorial](https://github.com/biomb-lab/scDECA/blob/main/tutorials/scDECA_advanced.ipynb)**  
 Explore advanced features:
@@ -171,37 +190,14 @@ Compare scDECA with other methods:
 - Imputation quality metrics
 - Co-expression recovery evaluation
 - Gene function prediction benchmarks
-- Visualization of results
+- Visualization of results -->
 
 ## 📊 **Example Datasets**
 
 We provide preprocessed example datasets with FM embeddings:
 
-- **Melanoma**: Tumor microenvironment profiling
+  Download: [Google Drive](https://drive.google.com/file/d/1jNmiCSoZvXwdhfdHKWQKjdkW-CgA_J9H/view?usp=share_link)
 
-Download from: [Link to datasets]
-
-## 📈 **Performance**
-
-
-## 🔧 **Troubleshooting**
-
-### Common Issues and Solutions
-
-**Out of Memory Errors:**
-- Increase `number_of_batches` (e.g., 10-20)
-- Set `split_cells=True` for cell-wise batching
-- Reduce `n_neighbors` (e.g., 15)
-
-**PPI Network Matching:**
-- For human data: set `human_flag=True`
-- For mouse data: ensure gene symbols are uppercase
-- Use `biogrid_flag=True` for alternative PPI network
-
-**FM Embedding Issues:**
-- Verify embeddings exist in `adata.varm[embedding_key]`
-- Check embedding dimensions match gene count
-- Ensure proper species-specific token extraction
 
 ## 📑 **Citation**
 

@@ -7,8 +7,6 @@ from torch_geometric.utils import convert
 from torch_geometric.data import Data
 from torch.utils.data import DataLoader, Dataset
 
-NETWORK_CUTOFF = 0.5  # Minimum edge weight for PPI network
-EXPRESSION_CUTOFF = 0.0  # Minimum expression threshold
 
 
 def extract_embeddings_from_anndata(adata, embedding_key, target_genes=None, human_flag=True):
@@ -123,7 +121,8 @@ def prepare_gene_embeddings(model_type, target_genes, adata=None, embedding_key=
     return extract_embeddings_from_anndata(adata, embedding_key, target_genes, human_flag)
 
 
-def construct_network(obj, net, model_type, adata=None, embedding_key=None, biogrid_flag=False, human_flag=False):
+def construct_network(obj, net, model_type, adata=None, embedding_key=None, biogrid_flag=False, human_flag=False, 
+                      expression_cutoff=None, network_cutoff=None):
     """
     Construct gene-gene network with foundation model embeddings and raw expression.
     Integrates PPI network with single-cell data and gene embeddings.
@@ -150,7 +149,7 @@ def construct_network(obj, net, model_type, adata=None, embedding_key=None, biog
 
     if not biogrid_flag:
         net.columns = ["Source", "Target", "Conn"]
-        net = net.loc[net.Conn >= NETWORK_CUTOFF]
+        net = net.loc[net.Conn >= network_cutoff] 
     else:
         net.columns = ["Source", "Target"]
 
@@ -173,7 +172,7 @@ def construct_network(obj, net, model_type, adata=None, embedding_key=None, biog
     node_feature_raw = sc.get.obs_df(obj.raw.to_adata(), sc_genes).T
     node_feature_raw["non_zero"] = node_feature_raw.astype(bool).sum(axis=1)
     node_feature_filtered = node_feature_raw[
-        node_feature_raw["non_zero"] > node_feature_raw.shape[1] * EXPRESSION_CUTOFF
+        node_feature_raw["non_zero"] > node_feature_raw.shape[1] * expression_cutoff
     ].drop("non_zero", axis=1)
 
     selected_genes = node_feature_filtered.index.tolist()

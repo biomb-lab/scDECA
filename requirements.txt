@@ -1,0 +1,28 @@
+# core scientific stack
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+seaborn
+networkx
+ipykernel
+# single-cell analysis
+scanpy>=1.11
+anndata>=0.11
+umap-learn
+leidenalg
+
+# scvi / integration (only if you actually use them in scDECA)
+scvi-tools>=0.20
+scib>=1.1
+
+# scGPT and related
+scgpt==0.2.4
+datasets>=2.21.0
+
+# graph learning
+torch-geometric==2.6.1
+
+# logging / utils (only if you use them explicitly)
+tqdm
